@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RETRO SNAKE - Arcade Suite</title>
+  <title>RETRO ARCADE SUITE</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <style>
     * {
@@ -50,7 +50,7 @@
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 20px;
       margin-bottom: 15px;
       color: #ff0055;
       text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
@@ -62,7 +62,7 @@
       justify-content: space-between;
       width: 400px;
       margin-bottom: 15px;
-      font-size: 12px;
+      font-size: 10px;
       color: #00ffcc;
       text-shadow: 0 0 5px #00ffcc;
     }
@@ -78,12 +78,12 @@
       display: block;
     }
 
-    /* Overlay Screens (Start, Game Over, High Score) */
+    /* Overlays */
     .overlay {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(5, 5, 8, 0.92);
+      background: rgba(5, 5, 8, 0.95);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -98,17 +98,42 @@
     }
 
     .overlay h2 {
-      font-size: 18px;
+      font-size: 16px;
       color: #ff0055;
       margin-bottom: 15px;
       text-shadow: 0 0 8px #ff0055;
     }
 
     .overlay p {
-      font-size: 10px;
+      font-size: 9px;
       line-height: 1.6;
       margin-bottom: 15px;
       color: #fff;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 220px;
+    }
+
+    button {
+      background: #ff0055;
+      color: #fff;
+      border: none;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      padding: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff0055;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #00ffcc;
+      color: #000;
+      box-shadow: 0 0 10px #00ffcc;
     }
 
     input[type="text"] {
@@ -126,25 +151,7 @@
       box-shadow: 0 0 5px #00ffcc;
     }
 
-    button {
-      background: #ff0055;
-      color: #fff;
-      border: none;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 10px;
-      padding: 10px 15px;
-      cursor: pointer;
-      box-shadow: 0 0 10px #ff0055;
-      transition: all 0.2s ease;
-    }
-
-    button:hover {
-      background: #00ffcc;
-      color: #000;
-      box-shadow: 0 0 10px #00ffcc;
-    }
-
-    /* Leaderboard Table styling */
+    /* Leaderboard Table */
     .leaderboard-table {
       width: 100%;
       max-width: 280px;
@@ -154,7 +161,7 @@
     }
 
     .leaderboard-table th, .leaderboard-table td {
-      padding: 5px;
+      padding: 4px;
       text-align: left;
     }
 
@@ -167,29 +174,43 @@
       color: #00ffcc;
     }
 
-    .leaderboard-table td.rank {
-      color: #fff;
+    .nav-btn-row {
+      display: flex;
+      gap: 10px;
     }
   </style>
 </head>
 <body>
 
   <div class="arcade-container">
-    <h1>SNAKE ARCADE</h1>
+    <h1 id="arcade-title">ARCADE SUITE</h1>
     
     <div class="dashboard">
+      <div>GAME: <span id="current-game-title">SELECT</span></div>
       <div>SCORE: <span id="score">0000</span></div>
-      <div>HIGH: <span id="high-score">0000</span></div>
     </div>
 
     <div class="canvas-wrapper">
       <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-      <!-- Start Overlay -->
-      <div id="start-screen" class="overlay">
-        <h2>PRESS START</h2>
-        <p>USE ARROWS OR WASD<br/>TO CONTROL THE SNAKE</p>
-        <button id="start-btn">PLAY GAME</button>
+      <!-- Main Game Menu Overlay -->
+      <div id="menu-screen" class="overlay">
+        <h2>SELECT A GAME</h2>
+        <div class="menu-buttons">
+          <button onclick="selectGame('snake')">🐍 SNAKE</button>
+          <button onclick="selectGame('pong')">🏓 PONG</button>
+          <button onclick="selectGame('arkanoid')">🧱 ARKANOID</button>
+        </div>
+      </div>
+
+      <!-- Controls & Start Overlay -->
+      <div id="start-screen" class="overlay hidden">
+        <h2 id="start-game-title">GAME</h2>
+        <p id="game-instructions">CONTROLS GO HERE</p>
+        <div class="nav-btn-row">
+          <button id="start-btn">PLAY</button>
+          <button onclick="showMainMenu()">MENU</button>
+        </div>
       </div>
 
       <!-- High Score Entry Overlay -->
@@ -213,178 +234,324 @@
           </thead>
           <tbody id="leaderboard-body"></tbody>
         </table>
-        <button id="restart-btn">PLAY AGAIN</button>
+        <div class="nav-btn-row">
+          <button id="restart-btn">AGAIN</button>
+          <button onclick="showMainMenu()">MENU</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Canvas Setup
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     // UI Elements
     const scoreEl = document.getElementById('score');
-    const highScoreEl = document.getElementById('high-score');
+    const currentGameTitleEl = document.getElementById('current-game-title');
+    const startGameTitleEl = document.getElementById('start-game-title');
+    const gameInstructionsEl = document.getElementById('game-instructions');
+    
+    const menuScreen = document.getElementById('menu-screen');
     const startScreen = document.getElementById('start-screen');
     const highscoreScreen = document.getElementById('highscore-screen');
     const gameoverScreen = document.getElementById('gameover-screen');
+    
     const startBtn = document.getElementById('start-btn');
     const submitBtn = document.getElementById('submit-score-btn');
     const restartBtn = document.getElementById('restart-btn');
     const initialsInput = document.getElementById('initials');
     const leaderboardBody = document.getElementById('leaderboard-body');
 
-    // Grid Configuration
-    const GRID_SIZE = 20;
-    const TILE_COUNT = canvas.width / GRID_SIZE; // 20x20 grid
-
-    // Game Variables
-    let snake = [];
-    let food = { x: 0, y: 0 };
-    let dx = GRID_SIZE;
-    let dy = 0;
-    let nextDx = GRID_SIZE;
-    let nextDy = 0;
-    let score = 0;
+    // Global Suite State
+    let currentGame = null; // 'snake', 'pong', or 'arkanoid'
     let gameLoop = null;
-    let gameSpeed = 100; // ms per tick
+    let score = 0;
+    let keys = {};
 
-    // Initialize Game State
-    function init() {
-      snake = [
-        { x: 5 * GRID_SIZE, y: 10 * GRID_SIZE },
-        { x: 4 * GRID_SIZE, y: 10 * GRID_SIZE },
-        { x: 3 * GRID_SIZE, y: 10 * GRID_SIZE }
-      ];
-      dx = GRID_SIZE;
-      dy = 0;
-      nextDx = GRID_SIZE;
-      nextDy = 0;
-      score = 0;
-      gameSpeed = 100;
+    // Key Listeners
+    window.addEventListener('keydown', e => { keys[e.key] = true; });
+    window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    // --- MENU NAVIGATION ---
+    function showMainMenu() {
+      clearInterval(gameLoop);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      startScreen.classList.add('hidden');
+      highscoreScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+      menuScreen.classList.remove('hidden');
+      
+      currentGameTitleEl.textContent = 'SELECT';
       scoreEl.textContent = '0000';
-      updateHighScoreDisplay();
-      spawnFood();
     }
 
-    // Spawn Food in random empty tile
-    function spawnFood() {
-      while (true) {
-        food.x = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
-        food.y = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
-        // Check if food spawned on snake body
-        let collision = snake.some(segment => segment.x === food.x && segment.y === food.y);
-        if (!collision) break;
+    function selectGame(game) {
+      currentGame = game;
+      menuScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+
+      if (game === 'snake') {
+        currentGameTitleEl.textContent = 'SNAKE';
+        startGameTitleEl.textContent = 'SNAKE';
+        gameInstructionsEl.innerHTML = 'USE ARROWS OR WASD<br/>EAT FOOD & GROW!';
+      } else if (game === 'pong') {
+        currentGameTitleEl.textContent = 'PONG';
+        startGameTitleEl.textContent = 'PONG';
+        gameInstructionsEl.innerHTML = 'W/S OR ARROW KEYS<br/>TO MOVE PADDLE<br/>BEAT THE AI TO 5!';
+      } else if (game === 'arkanoid') {
+        currentGameTitleEl.textContent = 'ARKANOID';
+        startGameTitleEl.textContent = 'ARKANOID';
+        gameInstructionsEl.innerHTML = 'LEFT/RIGHT ARROWS OR A/D<br/>BREAK ALL BRICKS!';
       }
     }
 
-    // Main Game Loop
-    function update() {
-      dx = nextDx;
-      dy = nextDy;
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
 
-      // Move Head
-      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+    function startGame() {
+      startScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+      score = 0;
+      scoreEl.textContent = '0000';
 
-      // Wall Collision Check
-      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-        return gameOver();
-      }
+      if (currentGame === 'snake') initSnake();
+      else if (currentGame === 'pong') initPong();
+      else if (currentGame === 'arkanoid') initArkanoid();
+    }
 
-      // Self Collision Check
-      for (let i = 0; i < snake.length; i++) {
-        if (snake[i].x === head.x && snake[i].y === head.y) {
-          return gameOver();
-        }
+    // ==========================================
+    // 🐍 1. SNAKE GAME ENGINE
+    // ==========================================
+    const GRID = 20;
+    let snake, food, snakeDx, snakeDy, snakeNextDx, snakeNextDy, snakeSpeed;
+
+    function initSnake() {
+      snake = [
+        { x: 5 * GRID, y: 10 * GRID },
+        { x: 4 * GRID, y: 10 * GRID },
+        { x: 3 * GRID, y: 10 * GRID }
+      ];
+      snakeDx = GRID; snakeDy = 0;
+      snakeNextDx = GRID; snakeNextDy = 0;
+      snakeSpeed = 100;
+      spawnSnakeFood();
+
+      clearInterval(gameLoop);
+      gameLoop = setInterval(updateSnake, snakeSpeed);
+    }
+
+    function spawnSnakeFood() {
+      food = {
+        x: Math.floor(Math.random() * (canvas.width / GRID)) * GRID,
+        y: Math.floor(Math.random() * (canvas.height / GRID)) * GRID
+      };
+    }
+
+    function updateSnake() {
+      // Handle direction input
+      if ((keys['ArrowUp'] || keys['w'] || keys['W']) && snakeDy === 0) { snakeNextDx = 0; snakeNextDy = -GRID; }
+      if ((keys['ArrowDown'] || keys['s'] || keys['S']) && snakeDy === 0) { snakeNextDx = 0; snakeNextDy = GRID; }
+      if ((keys['ArrowLeft'] || keys['a'] || keys['A']) && snakeDx === 0) { snakeNextDx = -GRID; snakeNextDy = 0; }
+      if ((keys['ArrowRight'] || keys['d'] || keys['D']) && snakeDx === 0) { snakeNextDx = GRID; snakeNextDy = 0; }
+
+      snakeDx = snakeNextDx; snakeDy = snakeNextDy;
+      const head = { x: snake[0].x + snakeDx, y: snake[0].y + snakeDy };
+
+      // Wall / Self Collisions
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height ||
+          snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+        return handleGameOver();
       }
 
       snake.unshift(head);
 
-      // Food Collision Check
       if (head.x === food.x && head.y === food.y) {
         score += 100;
         scoreEl.textContent = String(score).padStart(4, '0');
-        spawnFood();
-        // Slightly speed up game over time
-        if (gameSpeed > 50) {
-          clearInterval(gameLoop);
-          gameSpeed -= 1;
-          gameLoop = setInterval(update, gameSpeed);
-        }
+        spawnSnakeFood();
       } else {
-        snake.pop(); // Remove tail
+        snake.pop();
       }
 
-      draw();
+      // Render
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ff0055'; ctx.fillRect(food.x+1, food.y+1, GRID-2, GRID-2);
+      ctx.fillStyle = '#00ffcc';
+      snake.forEach(s => ctx.fillRect(s.x+1, s.y+1, GRID-2, GRID-2));
     }
 
-    // Render Graphics
-    function draw() {
-      // Clear Screen
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // ==========================================
+    // 🏓 2. PONG GAME ENGINE
+    // ==========================================
+    let playerY, aiY, ballX, ballY, ballSpeedX, ballSpeedY, playerScore, aiScore;
 
-      // Draw Food (Glowing Pink Block)
-      ctx.fillStyle = '#ff0055';
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ff0055';
-      ctx.fillRect(food.x + 1, food.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+    function initPong() {
+      playerY = 160; aiY = 160;
+      ballX = 200; ballY = 200;
+      ballSpeedX = 4; ballSpeedY = 3;
+      playerScore = 0; aiScore = 0;
 
-      // Draw Snake (Neon Cyan)
+      clearInterval(gameLoop);
+      gameLoop = setInterval(updatePong, 1000 / 60); // 60 FPS
+    }
+
+    function updatePong() {
+      // Player Control
+      if ((keys['ArrowUp'] || keys['w'] || keys['W']) && playerY > 0) playerY -= 6;
+      if ((keys['ArrowDown'] || keys['s'] || keys['S']) && playerY < canvas.height - 80) playerY += 6;
+
+      // Simple AI Control
+      if (ballY > aiY + 40 && aiY < canvas.height - 80) aiY += 3.5;
+      if (ballY < aiY + 40 && aiY > 0) aiY -= 3.5;
+
+      // Ball Movement
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Wall Bounces (Top/Bottom)
+      if (ballY <= 0 || ballY >= canvas.height) ballSpeedY *= -1;
+
+      // Paddle Bounces
+      // Player Paddle (Left)
+      if (ballX <= 20 && ballY >= playerY && ballY <= playerY + 80) {
+        ballSpeedX = Math.abs(ballSpeedX) + 0.2; // Speed up
+        score += 50;
+        scoreEl.textContent = String(score).padStart(4, '0');
+      }
+      // AI Paddle (Right)
+      if (ballX >= canvas.width - 20 && ballY >= aiY && ballY <= aiY + 80) {
+        ballSpeedX = -Math.abs(ballSpeedX) - 0.2;
+      }
+
+      // Point Scored
+      if (ballX < 0) {
+        aiScore++;
+        resetPongBall();
+      } else if (ballX > canvas.width) {
+        playerScore++;
+        score += 200;
+        scoreEl.textContent = String(score).padStart(4, '0');
+        resetPongBall();
+      }
+
+      if (playerScore >= 5 || aiScore >= 5) {
+        return handleGameOver();
+      }
+
+      // Render Pong
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#00ffcc';
-      ctx.shadowColor = '#00ffcc';
-      snake.forEach((segment, index) => {
-        // Head looks slightly brighter
-        if (index === 0) {
-          ctx.fillStyle = '#ffffff';
-        } else {
-          ctx.fillStyle = '#00ffcc';
+      ctx.fillRect(10, playerY, 10, 80); // Player
+      ctx.fillRect(canvas.width - 20, aiY, 10, 80); // AI
+      ctx.fillRect(ballX - 5, ballY - 5, 10, 10); // Ball
+
+      // Net
+      for (let i = 0; i < canvas.height; i += 20) {
+        ctx.fillRect(canvas.width / 2 - 1, i, 2, 10);
+      }
+    }
+
+    function resetPongBall() {
+      ballX = 200; ballY = 200;
+      ballSpeedX = (Math.random() > 0.5 ? 4 : -4);
+      ballSpeedY = (Math.random() > 0.5 ? 3 : -3);
+    }
+
+    // ==========================================
+    // 🧱 3. ARKANOID (BREAKOUT) GAME ENGINE
+    // ==========================================
+    let paddleX, arkBallX, arkBallY, arkBallDx, arkBallDy, bricks;
+    const BRICK_ROWS = 4, BRICK_COLS = 6;
+    const BRICK_W = 60, BRICK_H = 15;
+
+    function initArkanoid() {
+      paddleX = 160;
+      arkBallX = 200; arkBallY = 350;
+      arkBallDx = 3; arkBallDy = -3;
+      
+      bricks = [];
+      const colors = ['#ff0055', '#ff9900', '#ffff00', '#00ffcc'];
+      for (let r = 0; r < BRICK_ROWS; r++) {
+        for (let c = 0; c < BRICK_COLS; c++) {
+          bricks.push({
+            x: c * (BRICK_W + 5) + 10,
+            y: r * (BRICK_H + 5) + 30,
+            status: 1,
+            color: colors[r]
+          });
         }
-        ctx.fillRect(segment.x + 1, segment.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+      }
+
+      clearInterval(gameLoop);
+      gameLoop = setInterval(updateArkanoid, 1000 / 60);
+    }
+
+    function updateArkanoid() {
+      // Paddle Input
+      if ((keys['ArrowLeft'] || keys['a'] || keys['A']) && paddleX > 0) paddleX -= 6;
+      if ((keys['ArrowRight'] || keys['d'] || keys['D']) && paddleX < canvas.width - 80) paddleX += 6;
+
+      // Ball Movement
+      arkBallX += arkBallDx;
+      arkBallY += arkBallDy;
+
+      // Wall Collisions
+      if (arkBallX <= 0 || arkBallX >= canvas.width) arkBallDx *= -1;
+      if (arkBallY <= 0) arkBallDy *= -1;
+
+      // Bottom Loss Collision
+      if (arkBallY >= canvas.height) {
+        return handleGameOver();
+      }
+
+      // Paddle Collision
+      if (arkBallY >= 370 && arkBallY <= 380 && arkBallX >= paddleX && arkBallX <= paddleX + 80) {
+        arkBallDy = -Math.abs(arkBallDy);
+      }
+
+      // Brick Collision
+      let bricksLeft = 0;
+      bricks.forEach(b => {
+        if (b.status === 1) {
+          bricksLeft++;
+          if (arkBallX > b.x && arkBallX < b.x + BRICK_W && arkBallY > b.y && arkBallY < b.y + BRICK_H) {
+            arkBallDy *= -1;
+            b.status = 0;
+            score += 100;
+            scoreEl.textContent = String(score).padStart(4, '0');
+          }
+        }
       });
 
-      // Reset Shadow Blur for performance
-      ctx.shadowBlur = 0;
+      // Win Condition
+      if (bricksLeft === 0) {
+        score += 1000; // Win Bonus
+        return handleGameOver();
+      }
+
+      // Render Arkanoid
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ffcc';
+      ctx.fillRect(paddleX, 375, 80, 10); // Paddle
+      ctx.fillRect(arkBallX - 4, arkBallY - 4, 8, 8); // Ball
+
+      bricks.forEach(b => {
+        if (b.status === 1) {
+          ctx.fillStyle = b.color;
+          ctx.fillRect(b.x, b.y, BRICK_W, BRICK_H);
+        }
+      });
     }
 
-    // Keyboard Controls
-    window.addEventListener('keydown', e => {
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-          if (dy === 0) { nextDx = 0; nextDy = -GRID_SIZE; }
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-          if (dy === 0) { nextDx = 0; nextDy = GRID_SIZE; }
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-          if (dx === 0) { nextDx = -GRID_SIZE; nextDy = 0; }
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-          if (dx === 0) { nextDx = GRID_SIZE; nextDy = 0; }
-          break;
-      }
-    });
-
-    // Start Game
-    startBtn.addEventListener('click', () => {
-      startScreen.classList.add('hidden');
-      init();
-      gameLoop = setInterval(update, gameSpeed);
-    });
-
-    // Game Over Handler
-    function gameOver() {
+    // ==========================================
+    // 🏆 LEADERBOARD SYSTEM (LOCAL STORAGE)
+    // ==========================================
+    function handleGameOver() {
       clearInterval(gameLoop);
-      const scores = getLeaderboard();
+      const scores = getLeaderboard(currentGame);
       const isTopTen = scores.length < 10 || score > (scores[scores.length - 1]?.score || 0);
 
       if (isTopTen && score > 0) {
@@ -395,40 +562,29 @@
       }
     }
 
-    // Submit High Score
     submitBtn.addEventListener('click', saveScore);
-    initialsInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') saveScore();
-    });
+    initialsInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveScore(); });
 
     function saveScore() {
       const initials = (initialsInput.value || 'AAA').toUpperCase().slice(0, 3);
-      let scores = getLeaderboard();
+      let scores = getLeaderboard(currentGame);
 
       scores.push({ name: initials, score: score });
       scores.sort((a, b) => b.score - a.score);
-      scores = scores.slice(0, 10); // Keep top 10
+      scores = scores.slice(0, 10);
 
-      localStorage.setItem('snake_leaderboard', JSON.stringify(scores));
+      localStorage.setItem(`leaderboard_${currentGame}`, JSON.stringify(scores));
       highscoreScreen.classList.add('hidden');
       initialsInput.value = '';
       showLeaderboard();
-      updateHighScoreDisplay();
     }
 
-    // Leaderboard Helper Functions
-    function getLeaderboard() {
-      return JSON.parse(localStorage.getItem('snake_leaderboard')) || [];
-    }
-
-    function updateHighScoreDisplay() {
-      const scores = getLeaderboard();
-      const topScore = scores.length > 0 ? scores[0].score : 0;
-      highScoreEl.textContent = String(topScore).padStart(4, '0');
+    function getLeaderboard(game) {
+      return JSON.parse(localStorage.getItem(`leaderboard_${game}`)) || [];
     }
 
     function showLeaderboard() {
-      const scores = getLeaderboard();
+      const scores = getLeaderboard(currentGame);
       leaderboardBody.innerHTML = '';
 
       if (scores.length === 0) {
@@ -437,7 +593,7 @@
         scores.forEach((entry, index) => {
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td class="rank">${index + 1}</td>
+            <td>${index + 1}</td>
             <td>${entry.name}</td>
             <td>${String(entry.score).padStart(4, '0')}</td>
           `;
@@ -448,15 +604,8 @@
       gameoverScreen.classList.remove('hidden');
     }
 
-    // Restart Game
-    restartBtn.addEventListener('click', () => {
-      gameoverScreen.classList.add('hidden');
-      init();
-      gameLoop = setInterval(update, gameSpeed);
-    });
-
-    // Initial load display
-    updateHighScoreDisplay();
+    // Start with the Main Menu
+    showMainMenu();
   </script>
 </body>
 </html>
