@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RETRO SNAKE - Arcade Suite</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: #0d0d11;
+      color: #00ffcc;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* CRT Overlay Effect */
+    body::after {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .arcade-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 4px solid #ff0055;
+      box-shadow: 0 0 20px #ff0055, inset 0 0 15px #ff0055;
+      padding: 20px;
+      border-radius: 12px;
+      background-color: #050508;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 15px;
+      color: #ff0055;
+      text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
+      letter-spacing: 2px;
+    }
+
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      width: 400px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      color: #00ffcc;
+      text-shadow: 0 0 5px #00ffcc;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      border: 3px solid #00ffcc;
+      box-shadow: 0 0 10px #00ffcc;
+    }
+
+    canvas {
+      background-color: #000;
+      display: block;
+    }
+
+    /* Overlay Screens (Start, Game Over, High Score) */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(5, 5, 8, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .overlay h2 {
+      font-size: 18px;
+      color: #ff0055;
+      margin-bottom: 15px;
+      text-shadow: 0 0 8px #ff0055;
+    }
+
+    .overlay p {
+      font-size: 10px;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+
+    input[type="text"] {
+      background: #000;
+      border: 2px solid #00ffcc;
+      color: #00ffcc;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      padding: 8px;
+      text-align: center;
+      width: 120px;
+      outline: none;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      box-shadow: 0 0 5px #00ffcc;
+    }
+
+    button {
+      background: #ff0055;
+      color: #fff;
+      border: none;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      padding: 10px 15px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff0055;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #00ffcc;
+      color: #000;
+      box-shadow: 0 0 10px #00ffcc;
+    }
+
+    /* Leaderboard Table styling */
+    .leaderboard-table {
+      width: 100%;
+      max-width: 280px;
+      margin-bottom: 15px;
+      border-collapse: collapse;
+      font-size: 9px;
+    }
+
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 5px;
+      text-align: left;
+    }
+
+    .leaderboard-table th {
+      color: #ff0055;
+      border-bottom: 1px solid #ff0055;
+    }
+
+    .leaderboard-table td {
+      color: #00ffcc;
+    }
+
+    .leaderboard-table td.rank {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="arcade-container">
+    <h1>SNAKE ARCADE</h1>
+    
+    <div class="dashboard">
+      <div>SCORE: <span id="score">0000</span></div>
+      <div>HIGH: <span id="high-score">0000</span></div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+      <!-- Start Overlay -->
+      <div id="start-screen" class="overlay">
+        <h2>PRESS START</h2>
+        <p>USE ARROWS OR WASD<br/>TO CONTROL THE SNAKE</p>
+        <button id="start-btn">PLAY GAME</button>
+      </div>
+
+      <!-- High Score Entry Overlay -->
+      <div id="highscore-screen" class="overlay hidden">
+        <h2>NEW HIGH SCORE!</h2>
+        <p>ENTER YOUR INITIALS:</p>
+        <input type="text" id="initials" maxlength="3" placeholder="AAA" autocomplete="off" />
+        <button id="submit-score-btn">SUBMIT</button>
+      </div>
+
+      <!-- Game Over & Leaderboard Overlay -->
+      <div id="gameover-screen" class="overlay hidden">
+        <h2>TOP 10 SCORES</h2>
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>NAME</th>
+              <th>SCORE</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+        <button id="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Canvas Setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('high-score');
+    const startScreen = document.getElementById('start-screen');
+    const highscoreScreen = document.getElementById('highscore-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const startBtn = document.getElementById('start-btn');
+    const submitBtn = document.getElementById('submit-score-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const initialsInput = document.getElementById('initials');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+
+    // Grid Configuration
+    const GRID_SIZE = 20;
+    const TILE_COUNT = canvas.width / GRID_SIZE; // 20x20 grid
+
+    // Game Variables
+    let snake = [];
+    let food = { x: 0, y: 0 };
+    let dx = GRID_SIZE;
+    let dy = 0;
+    let nextDx = GRID_SIZE;
+    let nextDy = 0;
+    let score = 0;
+    let gameLoop = null;
+    let gameSpeed = 100; // ms per tick
+
+    // Initialize Game State
+    function init() {
+      snake = [
+        { x: 5 * GRID_SIZE, y: 10 * GRID_SIZE },
+        { x: 4 * GRID_SIZE, y: 10 * GRID_SIZE },
+        { x: 3 * GRID_SIZE, y: 10 * GRID_SIZE }
+      ];
+      dx = GRID_SIZE;
+      dy = 0;
+      nextDx = GRID_SIZE;
+      nextDy = 0;
+      score = 0;
+      gameSpeed = 100;
+      scoreEl.textContent = '0000';
+      updateHighScoreDisplay();
+      spawnFood();
+    }
+
+    // Spawn Food in random empty tile
+    function spawnFood() {
+      while (true) {
+        food.x = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
+        food.y = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
+        // Check if food spawned on snake body
+        let collision = snake.some(segment => segment.x === food.x && segment.y === food.y);
+        if (!collision) break;
+      }
+    }
+
+    // Main Game Loop
+    function update() {
+      dx = nextDx;
+      dy = nextDy;
+
+      // Move Head
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      // Wall Collision Check
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+        return gameOver();
+      }
+
+      // Self Collision Check
+      for (let i = 0; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
+          return gameOver();
+        }
+      }
+
+      snake.unshift(head);
+
+      // Food Collision Check
+      if (head.x === food.x && head.y === food.y) {
+        score += 100;
+        scoreEl.textContent = String(score).padStart(4, '0');
+        spawnFood();
+        // Slightly speed up game over time
+        if (gameSpeed > 50) {
+          clearInterval(gameLoop);
+          gameSpeed -= 1;
+          gameLoop = setInterval(update, gameSpeed);
+        }
+      } else {
+        snake.pop(); // Remove tail
+      }
+
+      draw();
+    }
+
+    // Render Graphics
+    function draw() {
+      // Clear Screen
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Food (Glowing Pink Block)
+      ctx.fillStyle = '#ff0055';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ff0055';
+      ctx.fillRect(food.x + 1, food.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+
+      // Draw Snake (Neon Cyan)
+      ctx.fillStyle = '#00ffcc';
+      ctx.shadowColor = '#00ffcc';
+      snake.forEach((segment, index) => {
+        // Head looks slightly brighter
+        if (index === 0) {
+          ctx.fillStyle = '#ffffff';
+        } else {
+          ctx.fillStyle = '#00ffcc';
+        }
+        ctx.fillRect(segment.x + 1, segment.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+      });
+
+      // Reset Shadow Blur for performance
+      ctx.shadowBlur = 0;
+    }
+
+    // Keyboard Controls
+    window.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          if (dy === 0) { nextDx = 0; nextDy = -GRID_SIZE; }
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          if (dy === 0) { nextDx = 0; nextDy = GRID_SIZE; }
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          if (dx === 0) { nextDx = -GRID_SIZE; nextDy = 0; }
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          if (dx === 0) { nextDx = GRID_SIZE; nextDy = 0; }
+          break;
+      }
+    });
+
+    // Start Game
+    startBtn.addEventListener('click', () => {
+      startScreen.classList.add('hidden');
+      init();
+      gameLoop = setInterval(update, gameSpeed);
+    });
+
+    // Game Over Handler
+    function gameOver() {
+      clearInterval(gameLoop);
+      const scores = getLeaderboard();
+      const isTopTen = scores.length < 10 || score > (scores[scores.length - 1]?.score || 0);
+
+      if (isTopTen && score > 0) {
+        highscoreScreen.classList.remove('hidden');
+        initialsInput.focus();
+      } else {
+        showLeaderboard();
+      }
+    }
+
+    // Submit High Score
+    submitBtn.addEventListener('click', saveScore);
+    initialsInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveScore();
+    });
+
+    function saveScore() {
+      const initials = (initialsInput.value || 'AAA').toUpperCase().slice(0, 3);
+      let scores = getLeaderboard();
+
+      scores.push({ name: initials, score: score });
+      scores.sort((a, b) => b.score - a.score);
+      scores = scores.slice(0, 10); // Keep top 10
+
+      localStorage.setItem('snake_leaderboard', JSON.stringify(scores));
+      highscoreScreen.classList.add('hidden');
+      initialsInput.value = '';
+      showLeaderboard();
+      updateHighScoreDisplay();
+    }
+
+    // Leaderboard Helper Functions
+    function getLeaderboard() {
+      return JSON.parse(localStorage.getItem('snake_leaderboard')) || [];
+    }
+
+    function updateHighScoreDisplay() {
+      const scores = getLeaderboard();
+      const topScore = scores.length > 0 ? scores[0].score : 0;
+      highScoreEl.textContent = String(topScore).padStart(4, '0');
+    }
+
+    function showLeaderboard() {
+      const scores = getLeaderboard();
+      leaderboardBody.innerHTML = '';
+
+      if (scores.length === 0) {
+        leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">NO SCORES YET</td></tr>';
+      } else {
+        scores.forEach((entry, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="rank">${index + 1}</td>
+            <td>${entry.name}</td>
+            <td>${String(entry.score).padStart(4, '0')}</td>
+          `;
+          leaderboardBody.appendChild(row);
+        });
+      }
+
+      gameoverScreen.classList.remove('hidden');
+    }
+
+    // Restart Game
+    restartBtn.addEventListener('click', () => {
+      gameoverScreen.classList.add('hidden');
+      init();
+      gameLoop = setInterval(update, gameSpeed);
+    });
+
+    // Initial load display
+    updateHighScoreDisplay();
+  </script>
+</body>
+</html>
