@@ -499,36 +499,62 @@
       arkBallY += arkBallDy;
 
       // Wall Collisions
-      if (arkBallX <= 0 || arkBallX >= canvas.width) arkBallDx *= -1;
-      if (arkBallY <= 0) arkBallDy *= -1;
+      if (arkBallX <= 4 || arkBallX >= canvas.width - 4) arkBallDx *= -1;
+      if (arkBallY <= 4) arkBallDy = Math.abs(arkBallDy); // Force downward bounce off ceiling
 
       // Bottom Loss Collision
       if (arkBallY >= canvas.height) {
         return handleGameOver();
       }
 
-      // Paddle Collision
-      if (arkBallY >= 370 && arkBallY <= 380 && arkBallX >= paddleX && arkBallX <= paddleX + 80) {
-        arkBallDy = -Math.abs(arkBallDy);
+      // Paddle Collision (Force ball UPWARD when hitting paddle)
+      if (arkBallY >= 365 && arkBallY <= 380 && arkBallX >= paddleX && arkBallX <= paddleX + 80) {
+        arkBallDy = -Math.abs(arkBallDy); // Always bounce UP off paddle
+        
+        // Angle control: Hit left side of paddle to send left, right side to send right
+        let hitPoint = arkBallX - (paddleX + 40);
+        arkBallDx = hitPoint * 0.1;
       }
 
-      // Brick Collision
+      // Brick Collision Logic (Smart Bounce Fix)
       let bricksLeft = 0;
       bricks.forEach(b => {
         if (b.status === 1) {
           bricksLeft++;
-          if (arkBallX > b.x && arkBallX < b.x + BRICK_W && arkBallY > b.y && arkBallY < b.y + BRICK_H) {
-            arkBallDy *= -1;
-            b.status = 0;
+          
+          // Check if ball touches brick
+          if (arkBallX > b.x && arkBallX < b.x + BRICK_W && 
+              arkBallY > b.y && arkBallY < b.y + BRICK_H) {
+            
+            b.status = 0; // Destroy brick
             score += 100;
             scoreEl.textContent = String(score).padStart(4, '0');
+
+            // Calculate overlap to find which side was hit
+            let overlapLeft = arkBallX - b.x;
+            let overlapRight = (b.x + BRICK_W) - arkBallX;
+            let overlapTop = arkBallY - b.y;
+            let overlapBottom = (b.y + BRICK_H) - arkBallY;
+
+            // Find smallest overlap (that's where the ball entered)
+            let minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+            if (minOverlap === overlapTop) {
+              arkBallDy = -Math.abs(arkBallDy); // Bounce UP
+            } else if (minOverlap === overlapBottom) {
+              arkBallDy = Math.abs(arkBallDy);  // Bounce DOWN
+            } else if (minOverlap === overlapLeft) {
+              arkBallDx = -Math.abs(arkBallDx); // Bounce LEFT
+            } else if (minOverlap === overlapRight) {
+              arkBallDx = Math.abs(arkBallDx);  // Bounce RIGHT
+            }
           }
         }
       });
 
       // Win Condition
       if (bricksLeft === 0) {
-        score += 1000; // Win Bonus
+        score += 1000;
         return handleGameOver();
       }
 
